@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>cn.chuanwise</groupId>
+    <artifactId>admin</artifactId>
+    <version>1.1</version>
+
+    <repositories>
+        <!--小明内核仓库-->
+        <repository>
+            <id>xiaoming-core</id>
+            <url>https://www.github.com/Chuanwise/xiaoming-bot</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.20</version>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.chuanwise</groupId>
+            <artifactId>xiaoming-core</artifactId>
+            <version>3.3.4</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/xiaoming-core-3.3.4-experimental.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.chuanwise</groupId>
+            <artifactId>xiaoming-api</artifactId>
+            <version>3.3.4</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/xiaoming-api-3.3.4-experimental.jar</systemPath>
+        </dependency>
+    </dependencies>
+</project>
