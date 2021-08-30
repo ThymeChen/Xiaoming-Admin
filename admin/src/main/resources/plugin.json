@@ -1,0 +1,7 @@
+{
+  "main": "cn.chuanwise.xiaoming.admin.AdminPlugin",
+  "name": "admin",
+  "alias": "管理插件",
+  "author": "ThymeChen",
+  "version": "1.0-SNAPSHOT"
+}
