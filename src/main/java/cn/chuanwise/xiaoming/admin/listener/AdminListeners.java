@@ -1,10 +1,10 @@
 package cn.chuanwise.xiaoming.admin.listener;
 
+import cn.chuanwise.utility.CollectionUtility;
 import cn.chuanwise.xiaoming.admin.AdminPlugin;
 import cn.chuanwise.xiaoming.admin.configuration.AdminConfiguration;
 import cn.chuanwise.xiaoming.annotation.EventHandler;
-import cn.chuanwise.xiaoming.contact.contact.GroupContact;
-import cn.chuanwise.xiaoming.contact.contact.MemberContact;
+import cn.chuanwise.xiaoming.contact.ContactManager;
 import cn.chuanwise.xiaoming.contact.message.GroupMessage;
 import cn.chuanwise.xiaoming.event.InteractEvent;
 import cn.chuanwise.xiaoming.event.SimpleListeners;
@@ -12,9 +12,11 @@ import cn.chuanwise.xiaoming.listener.ListenerPriority;
 import cn.chuanwise.xiaoming.user.GroupXiaomingUser;
 
 import net.mamoe.mirai.event.events.MemberJoinEvent;
+import net.mamoe.mirai.event.events.MessageRecallEvent;
 import net.mamoe.mirai.message.data.At;
 
-import java.util.Locale;
+import java.util.List;
+import java.util.Objects;
 
 public class AdminListeners extends SimpleListeners<AdminPlugin> {
     @EventHandler   //屏蔽
@@ -54,7 +56,7 @@ public class AdminListeners extends SimpleListeners<AdminPlugin> {
                 if (mes.toLowerCase().contains(key.toLowerCase()))
                     try {
                         message.recall();
-                        user.mute(600000);
+                        user.mute(1800000);
                         xiaomingBot.getContactManager().sendGroupMessage(group,
                                 new At(user.getCode()) + " 你发送了一条违规消息");
                         break;
@@ -77,5 +79,35 @@ public class AdminListeners extends SimpleListeners<AdminPlugin> {
             xiaomingBot.getContactManager().sendGroupMessage(group,
                     new At(qq).serializeToMiraiCode() + ' ' + adminConfiguration.join.get(group));
         }
+    }
+
+    @EventHandler   //防撤回
+    public void antiRecall(MessageRecallEvent.GroupRecall event) {
+        final AdminConfiguration adminConfiguration = plugin.getAdminConfiguration();
+        final long groupCode = event.getGroup().getId();
+        final long authorCode = event.getAuthorId();
+        final long operatorCode = event.getOperator().getId();
+
+        // 消息撤回时间
+        final long messageTime = event.getMessageTime();
+
+        if(!adminConfiguration.antiRecall.containsKey(groupCode) || !adminConfiguration.antiRecall.get(groupCode))
+            return;
+
+        // 获得被撤回的人最近发送的消息缓存
+        ContactManager contactManager = xiaomingBot.getContactManager();
+        List<GroupMessage> recentMessages = contactManager.forGroupMemberMessages(String.valueOf(groupCode),
+                String.valueOf(authorCode));
+        GroupMessage recalledMessage = CollectionUtility.first(recentMessages,
+                message -> (message.getTime()/10000 == messageTime/10));
+
+        if (!Objects.isNull(recalledMessage)) {
+            xiaomingBot.getContactManager().sendGroupMessage(groupCode, new At(operatorCode) + " 刚刚撤回了 "
+                    + new At(authorCode) + " 的消息：\n" + recalledMessage.serialize());
+        } else {
+            xiaomingBot.getContactManager().sendGroupMessage(groupCode, new At(operatorCode) + " 刚刚撤回了 "
+                    + new At(authorCode) + " 的消息，但时间找不到");
+        }
+
     }
 }

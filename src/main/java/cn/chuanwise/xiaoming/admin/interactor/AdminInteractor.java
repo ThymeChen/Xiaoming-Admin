@@ -58,7 +58,7 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
         } else {
             try {
                 member.mute(time);
-                user.sendMessage("成功禁言「{arg.qq}」" + time);
+                user.sendMessage("成功禁言「{arg.qq}」" + time/60000 + "分钟");
             } catch (Exception exception) {
                 exception.printStackTrace();
                 user.sendMessage("我好像没有足够的权限呢");
@@ -156,34 +156,33 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
         }
     }
 
-    @Filter("(添加|add)(关键词|key) {r:entry}")
+    @Filter("(添加|add)(关键词|key) {r:关键词}")
     @Permission("admin.add.bannedEntry")
     public void addGroupBannedEntry(GroupXiaomingUser user,
-                                    @FilterParameter("entry") String entry) {
+                                    @FilterParameter("关键词") String entry) {
         final Long group = user.getGroupCode();
 
-        final Set<String> en = MapUtility.getOrPutSupply(adminConfig.groupBannedEntries, group, HashSet::new);
-
-        if(adminConfig.groupBannedEntries.get(group).contains(entry)) {
+        if(!MapUtility.getOrPutSupply(adminConfig.groupBannedEntries, group, HashSet::new).add(entry)) {
             user.sendMessage("本群已经有关键词「" + entry + "」需要撤回了哦");
         }else {
             user.sendMessage("成功添加需要撤回的关键词「" + entry + '」');
             xiaomingBot.getFileSaver().readyToSave(adminConfig);
         }
-
-        en.add(entry);
     }
 
-    @Filter("(删除|remove)(关键词|key) {r:entry}")
+    @Filter("(删除|remove)(关键词|key) {r:关键词}")
     @Permission("admin.remove.bannedEntry")
     public void removeGroupBannedEntry(GroupXiaomingUser user,
-                                       @FilterParameter("entry") String entry) {
+                                       @FilterParameter("关键词") String entry) {
         final Long group = user.getGroupCode();
 
-        if(adminConfig.groupBannedEntries.get(group).contains(entry)) {
-            adminConfig.groupBannedEntries.get(group).remove(entry);
-            user.sendMessage("成功删除需要撤回的关键词「" + entry + '」');
-            xiaomingBot.getFileSaver().readyToSave(adminConfig);
+        if (adminConfig.groupBannedEntries.containsKey(group)) {
+            if(adminConfig.groupBannedEntries.get(group).remove(entry)) {
+                user.sendMessage("成功删除需要撤回的关键词「" + entry + '」');
+                xiaomingBot.getFileSaver().readyToSave(adminConfig);
+            }else {
+                user.sendMessage("本群没有关键词「" + entry + "」要撤回哦");
+            }
         }else {
             user.sendMessage("本群没有关键词「" + entry + "」要撤回哦");
         }
@@ -212,10 +211,10 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
 
     }
 
-    @Filter("(添加|创建|add)(迎新|迎新词|join) {r:entry}")
+    @Filter("(添加|创建|add)(迎新|迎新词|join) {r:迎新词}")
     @Permission("admin.add.join")
     public void addJoin(GroupXiaomingUser user,
-                     @FilterParameter("entry") String entry) {
+                     @FilterParameter("迎新词") String entry) {
         final Long group = user.getGroupCode();
 
         if(adminConfig.join.containsKey(group)) {
@@ -227,10 +226,10 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
         }
     }
 
-    @Filter("(修改|modify)(迎新|迎新词|join) {r:entry}")
+    @Filter("(修改|modify)(迎新|迎新词|join) {r:迎新词}")
     @Permission("admin.modify.join")
     public void modifyJoin(GroupXiaomingUser user,
-                           @FilterParameter("entry") String entry) {
+                           @FilterParameter("迎新词") String entry) {
         final Long group = user.getGroupCode();
 
         if(adminConfig.join.containsKey(group)) {
@@ -256,7 +255,7 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
         }
     }
 
-    @Filter("(迎新词|查看迎新词|listJoin)")
+    @Filter("(查看迎新词|迎新词|listJoin)")
     @Permission("admin.list.join")
     public void listJoin(GroupXiaomingUser user) {
         final Long group = user.getGroupCode();
@@ -268,5 +267,41 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
         }else {
             user.sendMessage("本群还没有设置入群欢迎呢，使用「添加迎新 {欢迎词}」创建一个吧");
         }
+    }
+
+    @Filter("(启用|开启|enable)(防撤回|antiRecall)")
+    @Permission("admin.enable.antiRecall")
+    public void antiRecall(GroupXiaomingUser user) {
+        final Long group = user.getGroupCode();
+
+        if(adminConfig.antiRecall.containsKey(group) && adminConfig.antiRecall.get(group)) {
+            user.sendMessage("本群已经开启了防撤回了哦");
+        }else {
+            try {
+                adminConfig.antiRecall.put(group, true);
+                user.sendMessage("成功开启本群的防撤回功能");
+                xiaomingBot.getFileSaver().readyToSave(adminConfig);
+            }catch (Exception e) {
+                e.printStackTrace();
+                user.sendMessage("开启防撤回失败，可能是本群已开启防撤回");
+            }
+        }
+    }
+
+    @Filter("(关闭|disable)(防撤回|antiRecall)")
+    @Permission("admin.disable.antiRecall")
+    public void antiRecallDisabled(GroupXiaomingUser user) {
+        final Long group = user.getGroupCode();
+
+        if(adminConfig.antiRecall.containsKey(group) && adminConfig.antiRecall.get(group)) {
+            try {
+                adminConfig.antiRecall.put(group, false);
+                user.sendMessage("成功关闭本群的防撤回功能");
+                xiaomingBot.getFileSaver().readyToSave(adminConfig);
+            }catch (Exception e) {
+                e.printStackTrace();
+            }
+        }else
+            user.sendMessage("关闭防撤回失败，可能是本群未开启防撤回");
     }
 }
