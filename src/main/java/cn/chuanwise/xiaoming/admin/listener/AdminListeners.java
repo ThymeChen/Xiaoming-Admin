@@ -14,6 +14,9 @@ import cn.chuanwise.xiaoming.user.GroupXiaomingUser;
 import net.mamoe.mirai.event.events.MemberJoinEvent;
 import net.mamoe.mirai.event.events.MessageRecallEvent;
 import net.mamoe.mirai.message.data.At;
+import net.mamoe.mirai.message.data.FlashImage;
+import net.mamoe.mirai.message.data.Image;
+import net.mamoe.mirai.message.data.MessageChain;
 
 import java.util.List;
 import java.util.Objects;
@@ -94,6 +97,9 @@ public class AdminListeners extends SimpleListeners<AdminPlugin> {
         if(!adminConfiguration.antiRecall.containsKey(groupCode) || !adminConfiguration.antiRecall.get(groupCode))
             return;
 
+        if(adminConfiguration.ignoreUsers.contains(authorCode))
+            return;
+
         // 获得被撤回的人最近发送的消息缓存
         ContactManager contactManager = xiaomingBot.getContactManager();
         List<GroupMessage> recentMessages = contactManager.forGroupMemberMessages(String.valueOf(groupCode),
@@ -109,5 +115,28 @@ public class AdminListeners extends SimpleListeners<AdminPlugin> {
                     + new At(authorCode) + " 的消息，但时间找不到");
         }
 
+    }
+
+    @EventHandler   //防闪照
+    public void antiFlash(InteractEvent event) {
+        final AdminConfiguration adminConfiguration = plugin.getAdminConfiguration();
+
+        if(!(event.getUser() instanceof GroupXiaomingUser))
+            return;
+
+        final Long group = ((GroupXiaomingUser) event.getUser()).getGroupCode();
+        final long qq = event.getUser().getCode();
+        final MessageChain messages = event.getContext().getMessage().getMessageChain();
+
+        FlashImage flashImage = (FlashImage) messages.stream().filter(FlashImage.class::isInstance).findFirst().orElse(null);
+
+        if(flashImage == null)
+            return;
+
+        if(!adminConfiguration.antiFlash.containsKey(group) || !adminConfiguration.antiFlash.get(group))
+            return;
+
+        xiaomingBot.getContactManager().sendGroupMessage(group, new At(qq) + " 发送了一张闪照，原图为：\n"
+                + flashImage.getImage());
     }
 }

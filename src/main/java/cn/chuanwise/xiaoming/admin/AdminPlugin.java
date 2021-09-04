@@ -24,7 +24,7 @@ public class AdminPlugin extends JavaPlugin {
 
     @Override
     public void onEnable(){
-        getLogger().info("Q群管理（Admin）插件已加载");
+        getLogger().info("Admin（管理）插件已加载");
 
         getXiaomingBot().getInteractorManager().registerInteractors(new AdminInteractor(), this);
 

@@ -300,8 +300,47 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
                 xiaomingBot.getFileSaver().readyToSave(adminConfig);
             }catch (Exception e) {
                 e.printStackTrace();
+                user.sendMessage("关闭防撤回失败，可能是本群未开启防撤回");
             }
         }else
-            user.sendMessage("关闭防撤回失败，可能是本群未开启防撤回");
+            user.sendMessage("本群尚未开启防撤回");
+    }
+
+    @Filter("(开启|启用|enable)(防闪照|antiFlash)")
+    @Permission("(admin.enable.antiFlash)")
+    public void antiFlash(GroupXiaomingUser user) {
+        final Long group = user.getGroupCode();
+
+        if(adminConfig.antiFlash.containsKey(group) && adminConfig.antiFlash.get(group)) {
+            user.sendMessage("本群已经开启了防撤回了哦");
+        }else {
+            try {
+                adminConfig.antiFlash.put(group, true);
+                user.sendMessage("成功开启本群的防闪照功能");
+                xiaomingBot.getFileSaver().readyToSave(adminConfig);
+            }catch (Exception e) {
+                e.printStackTrace();
+                user.sendMessage("开启防闪照失败，可能是本群已开启防闪照");
+            }
+        }
+    }
+
+    @Filter("(关闭|disable)(防闪照|antiFlash)")
+    @Permission("(admin.disable.antiFlash)")
+    public void antiFlashDisable(GroupXiaomingUser user) {
+        final Long group = user.getGroupCode();
+
+        if(adminConfig.antiFlash.get(group) && adminConfig.antiFlash.containsKey(group)) {
+            try {
+                adminConfig.antiFlash.put(group, false);
+                user.sendMessage("成功关闭本群的防闪照功能");
+                xiaomingBot.getFileSaver().readyToSave(adminConfig);
+            } catch (Exception e) {
+                e.printStackTrace();
+                user.sendMessage("关闭防闪照失败，可能是本群未开启防闪照");
+            }
+        }else {
+            user.sendMessage("本群尚未开启防闪照");
+        }
     }
 }
