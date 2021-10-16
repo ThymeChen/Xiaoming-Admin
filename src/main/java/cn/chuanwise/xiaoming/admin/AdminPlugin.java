@@ -1,6 +1,5 @@
 package cn.chuanwise.xiaoming.admin;
 
-import cn.chuanwise.toolkit.preservable.Preservable;
 import cn.chuanwise.xiaoming.admin.configuration.AdminConfiguration;
 import cn.chuanwise.xiaoming.admin.configuration.AdminData;
 import cn.chuanwise.xiaoming.admin.interactor.AdminInteractor;
@@ -36,9 +35,6 @@ public class AdminPlugin extends JavaPlugin {
             }
         }
 
-        xiaomingBot.getFileSaver().readyToSave(adminConfiguration);
-        xiaomingBot.getFileSaver().readyToSave(adminData);
-
         xiaomingBot.getEventManager().registerListeners(new AdminListeners(), this);
     }
 
@@ -48,6 +44,7 @@ public class AdminPlugin extends JavaPlugin {
 
         xiaomingBot.getInteractorManager().registerInteractors(new AdminInteractor(), this);
 
-        xiaomingBot.getFileSaver().readyToSave((Preservable<File>) adminConfiguration);
+        xiaomingBot.getFileSaver().readyToSave(adminConfiguration);
+        xiaomingBot.getFileSaver().readyToSave(adminData);
     }
 }

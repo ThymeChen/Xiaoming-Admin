@@ -1,8 +1,9 @@
 package cn.chuanwise.xiaoming.admin.interactor;
 
-import cn.chuanwise.utility.CollectionUtility;
-import cn.chuanwise.utility.MapUtility;
+import cn.chuanwise.util.CollectionUtil;
+import cn.chuanwise.util.MapUtil;
 import cn.chuanwise.xiaoming.admin.AdminPlugin;
+import cn.chuanwise.xiaoming.admin.configuration.AdminConfiguration;
 import cn.chuanwise.xiaoming.admin.configuration.AdminData;
 import cn.chuanwise.xiaoming.annotation.Filter;
 import cn.chuanwise.xiaoming.annotation.FilterParameter;
@@ -13,14 +14,23 @@ import cn.chuanwise.xiaoming.contact.contact.MemberContact;
 import cn.chuanwise.xiaoming.contact.message.Message;
 import cn.chuanwise.xiaoming.interactor.SimpleInteractors;
 import cn.chuanwise.xiaoming.user.GroupXiaomingUser;
-import cn.chuanwise.xiaoming.admin.configuration.AdminConfiguration;
 import cn.chuanwise.xiaoming.user.PrivateXiaomingUser;
 import cn.chuanwise.xiaoming.user.XiaomingUser;
+import cn.chuanwise.xiaoming.util.MiraiCodeUtil;
 import net.mamoe.mirai.message.code.MiraiCode;
+import net.mamoe.mirai.message.data.At;
 import net.mamoe.mirai.message.data.FlashImage;
+import net.mamoe.mirai.message.data.Image;
 import net.mamoe.mirai.message.data.MessageChain;
+import net.mamoe.mirai.utils.ExternalResource;
 
-import java.util.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 
 public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
     AdminConfiguration adminConfig;
@@ -73,7 +83,7 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
         }
     }
 
-    @Filter("(禁言|mute) {qq} {time}")
+    @Filter("(禁言|mute) {qq} {r:time}")
     @Permission("admin.mute.time")
     public void mute(GroupXiaomingUser user,
                      @FilterParameter("qq") long qq,
@@ -141,6 +151,7 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
 
     // 屏蔽用户发出的事件
     @Filter("(屏蔽|ignore)(用户|User) {qq}")
+    @Filter("(屏蔽|ignore)(用户|User) {qq} ")
     @Permission("admin.ignore.add")
     public void ignoreGroups(GroupXiaomingUser user,
                              @FilterParameter("qq") long qq) {
@@ -185,7 +196,7 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
         if (adminConfig.ignoreUsers.isEmpty()) {
             user.sendMessage("没有人要被屏蔽哦");
         } else {
-            list = list.concat(CollectionUtility.toIndexString(adminConfig.ignoreUsers,
+            list = list.concat(CollectionUtil.toIndexString(adminConfig.ignoreUsers,
                     xiaomingBot.getAccountManager()::getAliasAndCode));
             user.sendMessage(list);
         }
@@ -198,7 +209,7 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
                                     @FilterParameter("关键词") String entry) {
         final Long group = user.getGroupCode();
 
-        if (!MapUtility.getOrPutSupply(adminData.groupBannedEntries, group, HashSet::new).add(entry)) {
+        if (!MapUtil.getOrPutSupply(adminData.groupBannedEntries, group, HashSet::new).add(entry)) {
             user.sendMessage("本群已经有关键词「" + entry + "」需要撤回了哦");
         } else {
             user.sendMessage("成功添加需要撤回的关键词「" + entry + '」');
@@ -234,7 +245,7 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
             if (adminData.groupBannedEntries.get(group).isEmpty()) {
                 user.sendMessage("本群没有要撤回的关键词哦");
             } else {
-                list = list.concat(CollectionUtility.toIndexString(adminData.groupBannedEntries.get(group)));
+                list = list.concat(CollectionUtil.toIndexString(adminData.groupBannedEntries.get(group)));
                 user.sendMessage(list);
             }
         } else {
@@ -242,23 +253,8 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
         }
     }
 
-    @Filter(value = "", pattern = FilterPattern.START_EQUAL)    // 使所有消息都发出 InteractEvent 事件 以及私发闪照回复原图
-    public void recallKey(XiaomingUser user, Message message) {
-        if(!(user instanceof PrivateXiaomingUser))
-            return;
-
-        MessageChain messageChain = message.getMessageChain();
-        FlashImage flashImage = (FlashImage) messageChain
-                .stream()
-                .filter(FlashImage.class::isInstance)
-                .findFirst()
-                .orElse(null);
-
-        if(flashImage == null) {
-            return;
-        }else
-            user.sendMessage(flashImage.getImage().serializeToMiraiCode());
-    }
+    @Filter(value = "", pattern = FilterPattern.START_EQUAL)    // 使所有消息都发出 InteractEvent 事件
+    public void recallKey(XiaomingUser user, Message message) {}
 
     @Filter("(添加|创建|add)(迎新|迎新词|join) {r:迎新词}")
     @Permission("admin.join.add")
@@ -447,7 +443,7 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
     public void addAutoVerify(GroupXiaomingUser user,
                               @FilterParameter("内容") String remain) {
         final long group = user.getGroupCode();
-        Set<String> verify = MapUtility.getOrPutSupply(adminData.autoVerify, group, HashSet::new);
+        Set<String> verify = MapUtil.getOrPutSupply(adminData.autoVerify, group, HashSet::new);
 
         if (!adminConfig.enableAutoVerify.containsKey(group) || !adminConfig.enableAutoVerify.get(group)) {
             user.sendMessage("本群还没有开启自动审核哦");
@@ -484,7 +480,7 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
 
         try {
             index = (int) Integer.parseInt(remain);
-            key = CollectionUtility.arrayGet(adminData.autoVerify.get(group), index - 1);
+            key = CollectionUtil.arrayGet(adminData.autoVerify.get(group), index - 1);
         } catch (Exception e) {
 
         } finally {
@@ -524,11 +520,11 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
         try {
             if (adminConfig.autoReject.get(group)) {
                 user.sendMessage("当用户的申请信息中包含以下任意一条规则时加群请求会自动通过（需要管理员权限）：\n"
-                        + CollectionUtility.toIndexString(adminData.autoVerify.get(group))
+                        + CollectionUtil.toIndexString(adminData.autoVerify.get(group))
                         + "\nPS：当未命中任何规则时将自动拒绝加群请求");
             } else {
                 user.sendMessage("当用户的申请信息中包含以下任意一条规则时加群请求会自动通过（需要管理员权限）：\n"
-                        + CollectionUtility.toIndexString(adminData.autoVerify.get(group))
+                        + CollectionUtil.toIndexString(adminData.autoVerify.get(group))
                         + "\nPS：回答错误时不会自动拒绝");
             }
         } catch (Exception e) {
@@ -575,5 +571,73 @@ public class AdminInteractor extends SimpleInteractors<AdminPlugin> {
             xiaomingBot.getFileSaver().readyToSave(adminConfig);
             user.sendMessage("成功在本群关闭审核不通过自动拒绝");
         }
+    }
+
+    @Filter("图片 {r:图片链接}")
+    public void image(XiaomingUser user, @FilterParameter("图片链接") String str) {
+//        xiaomingBot.getScheduler().run(() -> {
+//            try {
+//                final URL url1 = new URL(MiraiCodeUtil.contentToString(str));
+//                final Image image = user.uploadImage(ExternalResource.create(url1.openStream()));
+//                user.sendMessage(image);
+//            } catch (ConnectException connectException) {
+//                connectException.printStackTrace();
+//                user.sendMessage("连接超时");
+//            } catch (MalformedURLException e) {
+//                e.printStackTrace();
+//                user.sendMessage("链接格式错误");
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//                user.sendMessage("未找到该图片");
+//            }
+//        });
+        xiaomingBot.getScheduler().run(() -> {
+            // generate url
+            final URL url1;
+            try {
+                url1 = new URL(MiraiCodeUtil.contentToString(str));
+            } catch (MalformedURLException exception) {
+                exception.printStackTrace();
+                user.sendMessage("图片链接错误");
+                return;
+            }
+
+            // upload image as external resource
+            // and send
+            try (final InputStream inputStream = url1.openStream();
+                 final ExternalResource resource = ExternalResource.create(inputStream)) {
+                user.sendMessage(user.uploadImage(resource));
+            } catch (IOException exception) {
+                user.sendError("请求失败：\n" + exception);
+            }
+        });
+    }
+
+    @Filter("查服 {r:ip}")
+    public void server(XiaomingUser user, Message message, @FilterParameter("ip") String ip) {
+        MessageChain messageChain = message.getMessageChain();
+        user.sendMessage("查询中，请稍后...");
+
+        xiaomingBot.getScheduler().run(() -> {
+            URL url = null;
+
+            try {
+                url = new URL("https://api.imlazy.ink/mcapi/?name=欢迎使用xx查服        人数:" +
+                        "&host=" + MiraiCodeUtil.contentToString(ip)
+                        + "&type=image&getmotd=%0a%0a&getbg=3.jpg");
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+                user.sendMessage("URL错误");
+            }
+
+            try (final InputStream inputStream = url.openStream()) {
+                final Image image = user.uploadImage(ExternalResource.create(inputStream));
+                user.sendMessage(image);
+            } catch (Exception exception) {
+                exception.printStackTrace();
+                //user.sendMessage("获取服务器信息失败");
+                user.sendMessage(new At(user.getCode()).serializeToMiraiCode() + " 获取服务器信息失败：\n" + exception);
+            }
+        });
     }
 }

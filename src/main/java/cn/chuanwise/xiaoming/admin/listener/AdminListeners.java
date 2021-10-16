@@ -1,6 +1,6 @@
 package cn.chuanwise.xiaoming.admin.listener;
 
-import cn.chuanwise.utility.CollectionUtility;
+import cn.chuanwise.util.CollectionUtil;
 import cn.chuanwise.xiaoming.admin.AdminPlugin;
 import cn.chuanwise.xiaoming.admin.configuration.AdminConfiguration;
 import cn.chuanwise.xiaoming.admin.configuration.AdminData;
@@ -11,7 +11,6 @@ import cn.chuanwise.xiaoming.event.MessageEvent;
 import cn.chuanwise.xiaoming.event.SimpleListeners;
 import cn.chuanwise.xiaoming.listener.ListenerPriority;
 import cn.chuanwise.xiaoming.user.GroupXiaomingUser;
-import cn.chuanwise.xiaoming.user.MemberXiaomingUser;
 import cn.chuanwise.xiaoming.user.PrivateXiaomingUser;
 import cn.chuanwise.xiaoming.user.XiaomingUser;
 
@@ -37,20 +36,18 @@ public class AdminListeners extends SimpleListeners<AdminPlugin> {
         xiaomingBot.getFileSaver().readyToSave(adminConfiguration);
     }
 
-    // 屏蔽
-    @EventListener
-    public void matchIgnoreUsers(InteractEvent interactEvent, MessageEvent messageEvent) {
+    // 屏蔽（优先级为高，凌驾于默认之上）
+    @EventListener(priority = ListenerPriority.HIGH)
+    public void matchIgnoreUsers(InteractEvent interactEvent) {
         final AdminConfiguration adminConfiguration = plugin.getAdminConfiguration();
-
         final long qq = interactEvent.getContext().getUser().getCode();
 
         if (adminConfiguration.ignoreUsers.contains(qq)) {
             interactEvent.cancel();
-            messageEvent.cancel();
         }
     }
 
-    // 关键词撤回
+    // 关键词撤回（最高优先级，不受 ignoreUsers 影响）
     @EventListener(priority = ListenerPriority.HIGHEST)
     public void recallKey(MessageEvent messageEvent) {
         final AdminConfiguration adminConfiguration = plugin.getAdminConfiguration();
@@ -113,9 +110,13 @@ public class AdminListeners extends SimpleListeners<AdminPlugin> {
     public void antiRecall(MessageRecallEvent.GroupRecall recall) {
         final AdminConfiguration adminConfiguration = plugin.getAdminConfiguration();
 
-        final long groupCode = recall.getGroup().getId();
-        final long authorCode = recall.getAuthorId();
-        final long operatorCode = recall.getOperator().getId();
+        final long groupCode = recall.getGroup().getId();   // 群号
+        final long authorCode = recall.getAuthorId();   // 消息原作者
+        final long operatorCode = recall.getOperator().getId(); // 撤回事件的操作者
+
+        // 判断是否被屏蔽
+        if (adminConfiguration.ignoreUsers.contains(authorCode))
+            return;
 
         // 消息撤回时间
         final long messageTime = recall.getMessageTime();
@@ -126,7 +127,7 @@ public class AdminListeners extends SimpleListeners<AdminPlugin> {
             return;
 
         // 获得被撤回的人最近发送的消息缓存
-        final MessageEvent messageEvent = CollectionUtility.first(xiaomingBot.getContactManager().getRecentMessageEvents(), event -> {
+        final MessageEvent messageEvent = CollectionUtil.first(xiaomingBot.getContactManager().getRecentMessageEvents(), event -> {
             final XiaomingUser user = event.getUser();
             return user instanceof GroupXiaomingUser &&
                     ((GroupXiaomingUser) user).getGroupCode() == groupCode &&
@@ -158,21 +159,32 @@ public class AdminListeners extends SimpleListeners<AdminPlugin> {
                 .findFirst()
                 .orElse(null);
 
-        if (flashImage == null)
+        // 判断消息是否包含闪照 及 发送消息者是否被屏蔽
+        if (flashImage == null || adminConfiguration.ignoreUsers.contains(qq))
             return;
 
         if (!adminConfiguration.antiFlash.containsKey(group) || !adminConfiguration.antiFlash.get(group))
             return;
 
-//        xiaomingBot.getContactManager().sendGroupMessage(group, new At(qq).serializeToMiraiCode() +
-//                " 发送了一张闪照，原图为：\n" + flashImage.getImage());
+        xiaomingBot.getContactManager().sendGroupMessage(group, new At(qq).serializeToMiraiCode() +
+                " 发送了一张闪照，原图为：\n" + flashImage.getImage());
 
         xiaomingBot.getContactManager().getGroupContact(group).sendMessage(new PlainText(flashImage.toString()));
     }
 
+    // 根据 miraiCode 发送闪照原图（仅限私聊）
     @EventListener
     public void flash(MessageEvent messageEvent) {
+        AdminConfiguration adminConfiguration = plugin.getAdminConfiguration();
         XiaomingUser user = messageEvent.getUser();
+
+        // 判断是否为私聊消息
+        if (!(user instanceof PrivateXiaomingUser))
+            return;
+
+        // 判断是否被屏蔽
+        if (adminConfiguration.ignoreUsers.contains(user.getCode()))
+            return;
 
         String message = MiraiCode.deserializeMiraiCode(messageEvent.getMessage().serialize()).contentToString();
         if(message.contains("反序列化"))
@@ -229,8 +241,8 @@ public class AdminListeners extends SimpleListeners<AdminPlugin> {
                         + requestEvent.getFromNick() + ")」向你所管理的群聊「" + group + "("
                         + xiaomingBot.getContactManager().getGroupContact(group).getAlias() + "）」发送了一条加群请求，其具体内容为：\n"
                         + request/* + "\n请回复「同意」来通过加群请求，其他任何回复都将拒绝加群请求"*/);
-
-                /*try {
+/*
+                try {
                     String reply = owner.nextMessage().toString();
 
                     if (Objects.equals(reply, "同意")) {
@@ -246,7 +258,8 @@ public class AdminListeners extends SimpleListeners<AdminPlugin> {
                 } catch (Exception e) {
                     e.printStackTrace();
                     return;
-                }*/
+                }
+ */
             }
         });
     }
