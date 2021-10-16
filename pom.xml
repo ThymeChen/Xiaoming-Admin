@@ -6,7 +6,19 @@
 
     <groupId>cn.chuanwise</groupId>
     <artifactId>admin</artifactId>
-    <version>1.3</version>
+    <version>1.7.2</version>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>8</source>
+                    <target>8</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
     <repositories>
         <!--小明内核仓库-->
@@ -26,17 +38,17 @@
         <dependency>
             <groupId>cn.chuanwise</groupId>
             <artifactId>xiaoming-core</artifactId>
-            <version>3.3.4</version>
+            <version>3.8.1</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/lib/xiaoming-core-3.3.4-experimental.jar</systemPath>
+            <systemPath>${project.basedir}/lib/xiaoming-core-3.8.1-rel.jar</systemPath>
         </dependency>
 
         <dependency>
             <groupId>cn.chuanwise</groupId>
             <artifactId>xiaoming-api</artifactId>
-            <version>3.3.4</version>
+            <version>3.8.1</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/lib/xiaoming-api-3.3.4-experimental.jar</systemPath>
+            <systemPath>${project.basedir}/lib/xiaoming-api-3.8.1-rel.jar</systemPath>
         </dependency>
     </dependencies>
 </project>
